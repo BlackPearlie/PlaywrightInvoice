@@ -3,174 +3,146 @@ import { BasePage } from './base.page';
 
 export class InvoicePage extends BasePage {
 
-    // ==========================
-    // Locators
-    // ==========================
+    createInvoiceButton: Locator;
+    clientNameTextbox: Locator;
+    addressTextbox: Locator;
+    //addCourseButton: Locator;
+    totalLabel: Locator;
+    dueDateTextbox: Locator;
+    statusDropdown: Locator;
+    submitButton: Locator;
+    successMessage: Locator;
 
-     createInvoiceButton: Locator;
-   
-
-     clientNameTextbox: Locator;
-
-     addressTextbox: Locator;
-
-     addCourseButton: Locator;
-
-    courseDropdown: Locator;
-    
-
-     totalLabel: Locator;
-
-     dueDateTextbox: Locator;
-
-     statusDropdown: Locator;
-
-     submitButton: Locator;
-
-     successMessage: Locator;
+    modal: Locator;
 
     constructor(page: Page) {
-
         super(page);
 
-        // Replace these with your application's locators
+        // MODAL CONTAINER
+        this.modal = page.locator('.invoice-modal').filter({ visible: true });
+        // MAIN BUTTONS
+        this.createInvoiceButton = page.getByRole('button', { name: /New Invoice/i });
+        //this.addCourseButton = this.modal.getByRole('button', { name: /Add Course/i });
+        this.submitButton = this.modal.getByRole('button', { name: /Create Invoice/i });
 
-        this.createInvoiceButton = page.getByRole('button', { name: 'New Invoice' });
+        // INPUTS 
+        this.clientNameTextbox = this.modal.getByPlaceholder('Type client name or email');
+        this.addressTextbox    = this.modal.getByPlaceholder('Enter client address');
+
+        this.dueDateTextbox    = this.modal.locator('input[type="date"]');
+
+        // STATUS DROPDOWN
+        this.statusDropdown = this.modal.locator('select').filter({ hasText: /pending|paid/i }).first();
 
 
-        this.clientNameTextbox = page.locator('//*[@id="app-root"]/div/div[3]/div/div[4]/div/form/div[1]/input');
+        // TOTAL LABEL (based on screenshot structure)
+        this.totalLabel        = this.modal.getByRole('heading', { name: /Total:/i }).locator('span').first();
 
-        this.addressTextbox = page.locator('//*[@id="app-root"]/div/div[3]/div/div[4]/div/form/div[2]/textarea');
-
-       // this.addCourseButton = page.getByRole('button', { name: '➕ Add Course' });
-       this.addCourseButton = page.locator('//*[@id="app-root"]/div/div[3]/div/div[4]/div/form/div[3]/div[1]/div/button[2]');
-        this.courseDropdown = page.locator(
-         'xpath=//*[@id="app-root"]/div/div[3]/div/div[4]/div/form/div[3]/div[2]/table/tbody/tr/td[1]/select'
-        );
-
-        //this.selectedCourse = page.
-        this.totalLabel = page.locator('//*[@id="app-root"]/div/div[3]/div/div[4]/div/form/div[4]/div[2]/div[4]/span[2]');
-
-        this.dueDateTextbox = page.locator('//*[@id="app-root"]/div/div[3]/div/div[4]/div/form/div[4]/div[1]/div[1]/input');
-
-        this.statusDropdown = page.locator('//*[@id="app-root"]/div/div[3]/div/div[4]/div/form/div[4]/div[1]/div[2]/select');
-
-        this.submitButton = page.getByRole('button', { name: 'Create Invoice' });
-
-        this.successMessage = page.locator('.alert-success');
+        // SUCCESS MESSAGE
+        this.successMessage    = page.locator('.alert-success');
     }
 
     /**
      * Open Create Invoice screen
      */
     async clickCreateInvoice() {
+        await this.createInvoiceButton.click({ force: true });
 
-        await this.click(this.createInvoiceButton);
-        await expect(this.page.getByRole('heading', { name: /Create New Invoice/i })).toBeVisible();
-      //  await expect(this.addCourseButton).toBeVisible();
+        // Wait for modal animation
+        await expect(this.modal).toBeVisible();
 
+        // Confirm heading inside modal
+        await expect(this.modal.getByRole('heading', { name: /Create New Invoice/i })).toBeVisible();
     }
 
     /**
-     * Complete invoice details
+     * Fill invoice details
      */
-    async enterInvoiceDetails(
-      //  recipient: string,
-        clientName: string,
-        address: string
-    ) {
-
-
-        await this.fill(this.clientNameTextbox, clientName);
-
-        await this.fill(this.addressTextbox, address);
-
-    }
+    async enterInvoiceDetails(clientName: string, address: string) {
+            await this.fill(this.clientNameTextbox, clientName);
+            await this.fill(this.addressTextbox, address);
+}
 
     /**
-     * Add one course
+     * Add a course 
      */
-    async addCourse( course: string )
-     {
+     async addCourse(course: string, rowIndex: number) {
+    // Click Add Course once via JS
+    await this.page.evaluate(() => {
+        const buttons = Array.from(document.querySelectorAll('button'));
+        const btn = buttons.find(b => /add course/i.test(b.textContent || ''));
+        btn?.click();
+    });
 
-       // await expect(this.addCourseButton).toBeVisible();
-        //await expect(this.addCourseButton).toBeEnabled();
-        //await this.addCourseButton.click({ force: true });
+    // Wait for the new row to appear (rowIndex + 1 selects with 'Select course')
+    await this.page.waitForFunction((expectedCount) => {
+        const selects = Array.from(document.querySelectorAll('select'));
+        return selects.filter(s =>
+            s.options[0]?.text.toLowerCase().includes('select course')
+        ).length >= expectedCount;
+    }, rowIndex + 1, { timeout: 10000 });
 
-        //await expect(this.courseDropdown).toBeVisible();
-       // await this.selectOption(this.courseDropdown, course);
+    // Target the specific row by index
+    const courseDropdown = this.modal
+        .locator('select')
+        .filter({ hasText: 'Select course' })
+        .nth(rowIndex);
 
-        
-        await this.verifyVisible(this.addCourseButton);
-        if (await this.addCourseButton.isVisible() && await this.addCourseButton.isEnabled()) { 
-        console.log('Add Course button is visible and ready to click.');
-        console.log(this.addCourseButton.textContent());
+    await expect(courseDropdown).toBeVisible();
+
+    // Select by partial text match
+    await courseDropdown.evaluate((s: HTMLSelectElement, val) => {
+        const opt = Array.from(s.options).find(o =>
+            o.text.toLowerCase().includes(val.toLowerCase())
+        );
+        if (opt) {
+            s.value = opt.value;
+            s.dispatchEvent(new Event('change', { bubbles: true }));
         }
-        await this.addCourseButton.click();
-
-        // Wait for the new course row to appear
-        await expect(this.courseDropdown).toBeVisible();
-        if (await this.courseDropdown.isVisible()) {
-            console.log('Course dropdown is visible.');
-        }
-       await this.courseDropdown.selectOption(course);
-    }
-        
-
-    
-
+    }, course);
+}
+   
     /**
-     * Verify invoice total
+     * Verify total
      */
     async verifyTotal(expectedTotal: string) {
-
-        await expect(this.totalLabel)
-            .toHaveText(expectedTotal);
-
+        await this.totalLabel.scrollIntoViewIfNeeded();
+        await expect(this.totalLabel).toHaveText(expectedTotal);
     }
 
     /**
      * Set due date
      */
-    async setDueDate(date: string) {
-
-        await this.fill(
-            this.dueDateTextbox,
-            date
-        );
-
-    }
+     async setDueDate(date: string) {
+    await this.dueDateTextbox.scrollIntoViewIfNeeded();
+    await this.fill(this.dueDateTextbox, date);
+   }
 
     /**
      * Select invoice status
      */
     async selectStatus(status: string) {
-
-        await this.selectOption(
-            this.statusDropdown,
-            status
-        );
-
+    // Scroll the status dropdown into view within the modal
+    await this.statusDropdown.scrollIntoViewIfNeeded();
+    await this.statusDropdown.evaluate((s: HTMLSelectElement, val) => {
+        s.value = val;
+        s.dispatchEvent(new Event('change', { bubbles: true }));
+    }, status.toLowerCase());
     }
 
     /**
      * Submit invoice
      */
     async createInvoice() {
-
-        await this.click(this.submitButton);
-
+        await this.submitButton.click({ force: true });
         await this.waitForPageLoad();
-
     }
 
     /**
-     * Verify invoice created successfully
+     * Verify invoice created
      */
     async verifyInvoiceCreated() {
-
-        await this.verifyVisible(this.successMessage);
-
+        await expect(this.successMessage).toBeVisible();
     }
-
 }
+

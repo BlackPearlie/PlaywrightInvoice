@@ -2,6 +2,7 @@
 import {expect, test} from '../fixtures/CustomFixtures';
 import { invoiceData, loginData } from '../utils/testData';
 import * as helpers from '../utils/helpers';
+
     
 
 test.describe('Create Invoice', () => {
@@ -28,16 +29,16 @@ test.describe('Create Invoice', () => {
         );
       
         //add course
-        for (const course of invoiceData.courses) {
-            await invoicePage.addCourse(course);
-        }        
+      for (let i = 0; i < invoiceData.courses.length; i++) {
+    await invoicePage.addCourse(invoiceData.courses[i], i);
+        }      
         
         //set due date
       //  const dueDate = helpers.getLastDayOfMonth(6); // June
        // await invoicePage.setDueDate(dueDate);
 
         //verify total
-       // await invoicePage.verifyTotal(invoiceData.expectedTotal);
+        await invoicePage.verifyTotal(invoiceData.expectedTotal);
 
         //set status
         await invoicePage.selectStatus(invoiceData.status);
