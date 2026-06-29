@@ -1,21 +1,16 @@
 {
   "name": "playwright-invoice",
   "version": "1.0.0",
-  "description": "",
-  "main": "index.js",
+  "description": "Playwright TypeScript Invoice Assessment",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "type": "commonjs",
-  "dependencies": {
-    "@playwright/test": "^1.61.1"
+    "test": "playwright test",
+    "test:headed": "playwright test --headed",
+    "test:debug": "playwright test --debug",
+    "report": "playwright show-report"
   },
   "devDependencies": {
-    "@types/node": "^26.0.1",
-    "ts-node": "^10.9.2",
-    "typescript": "^6.0.3"
+    "@playwright/test": "^1.54.0",
+    "@types/node": "^22.0.0",
+    "typescript": "^5.8.0"
   }
 }
